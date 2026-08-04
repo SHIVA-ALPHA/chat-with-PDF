@@ -75,7 +75,7 @@ def get_splitted_chunks():
 
 #==========================================STEP 5: GET AND LOAD DOCS==========================
 documents=load_documents()
-embeddings=load_embeddings()
+embeddings=load_embedding()
 chunks=get_splitted_chunks()
 
 @st.cache_data
