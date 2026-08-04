@@ -81,7 +81,7 @@ chunks=get_splitted_chunks()
 @st.cache_data
 def create_vector_db(chunks,_embeddings):
   #to build vector database
-  vectorstore=FAISS.from_documents(chunks,embedddings)
+  vectorstore=FAISS.from_documents(chunks,_embedddings)
   vectorstore.save_local("fasiss_index")
   return vectorstore
 
