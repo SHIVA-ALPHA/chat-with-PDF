@@ -43,7 +43,7 @@ if uploaded_file is not None:
 
 file_path=os.path.join(save_dir,uploaded_file.name)
 with open(file_path,"wb") as f:
-  f.write(uploaaded_file.getbuffer())
+  f.write(uploaded_file.getbuffer())
 st.write(file_path)
 
 #===========================================STEP4: LOAD RESOURCES==============================================
