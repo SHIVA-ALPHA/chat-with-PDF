@@ -35,13 +35,23 @@ if uploaded_file:
   with st.spinner("Reading PDF file"):
     data=uploaded_file.read()
 
+if uploaded_file is not None:
+  save_dir="pdf_files"
+  if not os.path.exists(save_dir):
+    os.makedirs(save_dir)
+
+file_path=os.path.join(save_dir,uploaded_file.name)
+with open(file_path,"wb") as f:
+  f.write(uploaaded_file.getbuffer())
+st.write(file_path)
+
 #===========================================STEP4: LOAD RESOURCES==============================================
 
 
 
 @st.cache_data
 def load_documents():
-  loader=PyPDFLoader(uploaded_file)
+  loader=PyPDFLoader(file_path)
   documents=loader.load()
   return documents
 
@@ -58,7 +68,7 @@ def get_splitted_chunks():
   splitter= RecursiveCharacterTextSplitter(
     chunk_size=1000,
     chunk_overlap=200)
-  chunks= splitter.split_documents(documents)
+  chunks = splitter.split_documents(documents)
   return chunks
 
 
@@ -68,20 +78,55 @@ embeddings=load_embeddings()
 chunks=get_splitted_chunks()
 
 @st.cache_data
-def create_vector_db(chunks,embeddings):
+def create_vector_db(chunks,_embeddings):
   #to build vector database
   vectorstore=FAISS.from_documents(chunks,embedddings)
   vectorstore.save_local("fasiss_index")
   return vectorstore
 
 @st.cache_data
-def create_retriever(vectorstore,k_value):
+def create_retriever(_vectorstore,k_value):
   retriever=vectorstore.as_retriever(search_kwarg={"k":k_value})
   return retriever
 
 vectorstore=create_vector_db(chunks,embeddings)
 k_slider=st.sidebar.slider("select top k-value",min_value=1,max_value=10)
 retriever=create_retriever(vectorstore,k_slider)
-  
-    st.sidebar.pdf(data)
-        
+st.sidebar.pdf(data)
+
+#=================================STEP6: LCEL RAG CHAIN=================================
+llm = ChatGoogleGenerativeAI(
+    model="gemini-3.5-flash")
+
+prompt = ChatPromptTemplate. from_template("""
+Answer the question using ONLY the context below.
+If the answer isn't in the context, say "I don't know based on the document."
+
+Context:
+{context}
+
+Question: {question}
+""")
+def format_docs(docs):
+  return"\n\n".join(doc.page_content for doc in docs)
+
+with st.spinner("Building RAG Chain"):
+  rag_chain=(
+      {"context": retriever | format_docs, "question": RunnablePassthrough()}
+      | prompt
+      | llm
+      | StrOutputParser()
+  )
+
+
+#=====================GET user input=================================
+
+user_question=st,text_area("Ask Question:")
+if user_question:
+  if st.button("Get Answer"):
+    with st.spinner("wait...."):
+      st.write_stream(rag_chain.stream(user_question))
+
+
+
+print("Done")
